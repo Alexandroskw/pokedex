@@ -5,8 +5,9 @@ from sqlalchemy import create_engine, text
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from uuid import UUID
 
-# COnfigure logging
+# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # API configuration
@@ -38,9 +39,10 @@ def fetch_pokemon(pokemon_id):
 # Function for create tables if they are not exist
 def create_tables(engine):
     with engine.connect() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\""))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS pokemon (
-                id SERIAL PRIMARY KEY,
+                id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 pokedex_number INTEGER UNIQUE NOT NULL,
                 name VARCHAR(100) NOT NULL,
                 height DECIMAL(5,2),
@@ -61,7 +63,7 @@ def create_tables(engine):
         """))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS pokemon_types (
-                pokemon_id INTEGER REFERENCES pokemon(id),
+                pokemon_id UUID REFERENCES pokemon(id),
                 type_id INTEGER REFERENCES types(id),
                 PRIMARY KEY (pokemon_id, type_id)
             )
@@ -74,7 +76,7 @@ def create_tables(engine):
         """))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS pokemon_abilities (
-                pokemon_id INTEGER REFERENCES pokemon(id),
+                pokemon_id UUID REFERENCES pokemon(id),
                 ability_id INTEGER REFERENCES abilities(id),
                 is_hidden BOOLEAN NOT NULL,
                 PRIMARY KEY (pokemon_id, ability_id)
@@ -114,6 +116,9 @@ def insert_pokemon(engine, pokemon_data):
             'speed': next(stat['base_stat'] for stat in pokemon_data['stats'] if stat['stat']['name'] == 'speed')
         })
         pokemon_id = result.fetchone()[0]
+
+        if isinstance(pokemon_id, str):
+            pokemon_id = UUID(pokemon_id)
 
         # Insert the types of each pokemon in the table 'types'
         for type_data in pokemon_data['types']:
