@@ -38,7 +38,7 @@ def fetch_pokemon(pokemon_id):
 
 def optimize_tables(engine):
     with engine.connect() as conn:
-        conn.execute(text("CREATE INDEX ID NOT EXISTS idx_pokemon_id ON pokemon (id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_pokemon_id ON pokemon (id)"))
         conn.execute(text("ANALYZE pokemon"))
 
 
